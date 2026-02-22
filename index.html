@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Controle Financeiro V3 (Firebase)</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-row">
+      <div class="brand">
+        <div class="logo">R$</div>
+        <div>
+          <h1>Controle Financeiro V3</h1>
+          <p>Firebase • Tempo real • Estilo planilha • Pago/Não pago • Parcelados</p>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <div class="muted" id="userInfo">Conectando…</div>
+        <button id="btnExportMonthCSV" class="btn btn-ghost">Exportar CSV (mês)</button>
+        <button id="btnExportBackup" class="btn btn-ghost">Backup (JSON)</button>
+        <label class="btn btn-ghost filelike">
+          Importar (JSON)
+          <input id="fileImportBackup" type="file" accept="application/json" hidden />
+        </label>
+        <button id="btnReset" class="btn btn-danger">Resetar mês</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap grid">
+    <!-- COLUNA ESQUERDA -->
+    <section class="card">
+      <div class="row between">
+        <div>
+          <h2>Mês atual</h2>
+          <p class="muted">Tudo é separado por mês/ano</p>
+        </div>
+        <div class="row">
+          <div class="field compact">
+            <label for="mes">Mês</label>
+            <input id="mes" type="month" />
+          </div>
+        </div>
+      </div>
+
+      <hr class="sep" />
+
+      <h2>Salário / saldo do mês</h2>
+      <div class="row">
+        <div class="field">
+          <label for="salario">Salário / saldo inicial (R$)</label>
+          <input id="salario" type="text" inputmode="decimal" placeholder="Ex: 3500,00" />
+        </div>
+        <button id="btnSalvarSalario" class="btn">Salvar</button>
+      </div>
+
+      <div class="summary">
+        <div class="pill">
+          <span class="muted">Saldo atual</span>
+          <strong id="saldoAtual">R$ 0,00</strong>
+        </div>
+        <div class="pill">
+          <span class="muted">A pagar (mês)</span>
+          <strong id="totalAPagar">R$ 0,00</strong>
+        </div>
+        <div class="pill">
+          <span class="muted">Pagos (mês)</span>
+          <strong id="totalPagos">R$ 0,00</strong>
+        </div>
+      </div>
+
+      <hr class="sep" />
+
+      <h2>Lançar despesa / dívida</h2>
+      <form id="formLancamento" class="stack">
+        <div class="row">
+          <div class="field">
+            <label for="tipo">Tipo</label>
+            <select id="tipo">
+              <option value="despesa">Despesa</option>
+              <option value="divida">Dívida</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="status">Status</label>
+            <select id="status">
+              <option value="nao_pago">Não pago (desconta)</option>
+              <option value="pago">Pago (não desconta)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="categoria">Categoria</label>
+            <select id="categoria">
+              <option>Aluguel</option>
+              <option>Água</option>
+              <option>Luz</option>
+              <option>Internet</option>
+              <option>Mercado</option>
+              <option>Açougue</option>
+              <option>Gasolina</option>
+              <option>Manutenção carro</option>
+              <option>Lanche</option>
+              <option>Bebida</option>
+              <option>Outros</option>
+            </select>
+          </div>
+
+          <div class="field" id="cartaoWrap" style="display:none">
+            <label for="cartao">Cartão/Banco (dívida ativa)</label>
+            <select id="cartao">
+              <option>Nubank</option>
+              <option>Neon</option>
+              <option>Santander</option>
+              <option>Banco do Brasil</option>
+              <option>Willbank</option>
+              <option>Digio</option>
+              <option>Mercado Pago</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="descricao">Descrição</label>
+            <input id="descricao" type="text" placeholder="Ex: Conta de luz / Fatura Nubank" />
+          </div>
+
+          <div class="field">
+            <label for="valor">Valor (R$)</label>
+            <input id="valor" type="text" inputmode="decimal" placeholder="Ex: 120,82" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="data">Data</label>
+            <input id="data" type="date" />
+          </div>
+          <button class="btn" type="submit">Adicionar</button>
+        </div>
+      </form>
+
+      <hr class="sep" />
+
+      <h2>Parcelados</h2>
+      <p class="muted">
+        Crie uma vez e gere parcelas no mês selecionado. Use a data da 1ª parcela e quantas já pagou.
+      </p>
+
+      <form id="formParcelado" class="stack">
+        <div class="row">
+          <div class="field">
+            <label for="parTipo">Tipo</label>
+            <select id="parTipo">
+              <option value="despesa">Despesa</option>
+              <option value="divida">Dívida (cartão)</option>
+            </select>
+          </div>
+
+          <div class="field" id="parCartaoWrap" style="display:none">
+            <label for="parCartao">Cartão</label>
+            <select id="parCartao">
+              <option>Nubank</option>
+              <option>Neon</option>
+              <option>Santander</option>
+              <option>Banco do Brasil</option>
+              <option>Willbank</option>
+              <option>Digio</option>
+              <option>Mercado Pago</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="parCategoria">Categoria</label>
+            <select id="parCategoria">
+              <option>Mercado</option>
+              <option>Gasolina</option>
+              <option>Manutenção carro</option>
+              <option>Internet</option>
+              <option>Outros</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="parDescricao">Descrição</label>
+            <input id="parDescricao" type="text" placeholder="Ex: TV Samsung" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="parValorParcela">Valor da parcela (R$)</label>
+            <input id="parValorParcela" type="text" inputmode="decimal" placeholder="Ex: 199,90" />
+          </div>
+
+          <div class="field">
+            <label for="parTotal">Total de parcelas</label>
+            <input id="parTotal" type="number" min="2" max="60" placeholder="Ex: 12" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="parPrimeiraData">Data da 1ª parcela</label>
+            <input id="parPrimeiraData" type="date" />
+          </div>
+
+          <div class="field">
+            <label for="parPagasAte">Parcelas já pagas (0..total)</label>
+            <input id="parPagasAte" type="number" min="0" max="60" placeholder="Ex: 3" />
+          </div>
+
+          <button class="btn" type="submit">Criar parcelado</button>
+        </div>
+
+        <div class="row between">
+          <small class="muted">Depois clique para gerar parcelas no mês selecionado.</small>
+          <button id="btnGerarParcelasMes" type="button" class="btn btn-ghost">Gerar parcelas no mês</button>
+        </div>
+
+        <div id="listaParcelados" class="mini-list"></div>
+      </form>
+    </section>
+
+    <!-- COLUNA DIREITA -->
+    <section class="card">
+      <div class="row between">
+        <div>
+          <h2>Planilha do mês</h2>
+          <p class="muted">Pago = verde • Não pago = vermelho</p>
+        </div>
+
+        <div class="row">
+          <select id="filtroTipo" class="select-compact">
+            <option value="todos">Todos</option>
+            <option value="despesa">Despesas</option>
+            <option value="divida">Dívidas</option>
+          </select>
+
+          <select id="filtroStatus" class="select-compact">
+            <option value="todos">Todos status</option>
+            <option value="nao_pago">A pagar</option>
+            <option value="pago">Pagos</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="cardsDividas" class="cards-grid"></div>
+
+      <hr class="sep" />
+
+      <div class="table-wrap">
+        <table class="sheet">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Tipo</th>
+              <th>Cartão</th>
+              <th>Categoria</th>
+              <th>Descrição</th>
+              <th>Status</th>
+              <th class="right">Valor</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyLancamentos"></tbody>
+        </table>
+      </div>
+
+      <div id="vazio" class="empty muted">Nenhum lançamento no mês selecionado.</div>
+    </section>
+  </main>
+
+  <dialog id="modalEdit" class="modal">
+    <form method="dialog" class="modal-box" id="formEdit">
+      <div class="row between">
+        <h3>Editar lançamento</h3>
+        <button class="iconbtn" value="cancel" type="submit">✕</button>
+      </div>
+
+      <input type="hidden" id="editId" />
+
+      <div class="row">
+        <div class="field">
+          <label for="editTipo">Tipo</label>
+          <select id="editTipo">
+            <option value="despesa">Despesa</option>
+            <option value="divida">Dívida</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="editStatus">Status</label>
+          <select id="editStatus">
+            <option value="nao_pago">Não pago</option>
+            <option value="pago">Pago</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="editCategoria">Categoria</label>
+          <select id="editCategoria">
+            <option>Aluguel</option><option>Água</option><option>Luz</option><option>Internet</option>
+            <option>Mercado</option><option>Açougue</option><option>Gasolina</option><option>Manutenção carro</option>
+            <option>Lanche</option><option>Bebida</option><option>Outros</option>
+          </select>
+        </div>
+
+        <div class="field" id="editCartaoWrap">
+          <label for="editCartao">Cartão</label>
+          <select id="editCartao">
+            <option>Nubank</option><option>Neon</option><option>Santander</option><option>Banco do Brasil</option>
+            <option>Willbank</option><option>Digio</option><option>Mercado Pago</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="editDescricao">Descrição</label>
+          <input id="editDescricao" type="text" />
+        </div>
+        <div class="field">
+          <label for="editValor">Valor (R$)</label>
+          <input id="editValor" type="text" inputmode="decimal" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="editData">Data</label>
+          <input id="editData" type="date" />
+        </div>
+      </div>
+
+      <div class="row end">
+        <button class="btn" value="ok" type="submit">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
