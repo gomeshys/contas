@@ -17,6 +17,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+
 // ===== Utils =====
 function formatBRL(n) {
   return Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -175,7 +176,7 @@ function getLancamentosFiltered() {
 
 // ===== DOM =====
 const elUserInfo = document.getElementById("userInfo");
-
+const elMobileList = document.getElementById("mobileList");
 const elMes = document.getElementById("mes");
 const elSalario = document.getElementById("salario");
 const elBtnSalvarSalario = document.getElementById("btnSalvarSalario");
@@ -450,6 +451,63 @@ function renderCardsDividas() {
     elCardsDividas.appendChild(card);
   }
 }
+function renderMobileList() {
+  if (!elMobileList) return;
+  const itens = getLancamentosFiltered();
+  elMobileList.innerHTML = "";
+
+  // Se não tem itens, não mostra nada (o "vazio" já aparece)
+  if (!itens.length) return;
+
+  for (const item of itens) {
+    const wrap = document.createElement("div");
+    wrap.className = "m-item " + (item.status === "pago" ? "paid" : "unpaid");
+
+    const tipoTxt = item.tipo === "divida" ? "Dívida" : "Despesa";
+    const statusTxt = item.status === "pago" ? "Pago" : "Não pago";
+    const cartaoTxt = item.tipo === "divida" ? (item.cartao || "—") : "—";
+
+    wrap.innerHTML = `
+      <div class="m-head">
+        <div class="m-title">
+          <strong>${escapeHtml(item.descricao || "(Sem descrição)")}</strong>
+          <small>${dateBR(item.dataISO)} • ${tipoTxt} • ${escapeHtml(item.categoria || "Outros")}</small>
+        </div>
+        <div class="m-value ${item.status === "pago" ? "pos" : "neg"}">${formatBRL(item.valor)}</div>
+      </div>
+
+      <div class="m-meta">
+        <div><b>Status:</b> ${statusTxt}</div>
+        <div><b>Cartão:</b> ${escapeHtml(cartaoTxt)}</div>
+      </div>
+    `;
+
+    const actions = document.createElement("div");
+    actions.className = "m-actions";
+
+    const btnToggle = document.createElement("button");
+    btnToggle.className = "iconbtn";
+    btnToggle.textContent = item.status === "pago" ? "Marcar não pago" : "Marcar pago";
+    btnToggle.onclick = () => togglePago(item.id);
+
+    const btnEdit = document.createElement("button");
+    btnEdit.className = "iconbtn";
+    btnEdit.textContent = "Editar";
+    btnEdit.onclick = () => openEditModal(item.id);
+
+    const btnDel = document.createElement("button");
+    btnDel.className = "iconbtn";
+    btnDel.textContent = "Excluir";
+    btnDel.onclick = () => excluirLancamento(item.id);
+
+    actions.appendChild(btnToggle);
+    actions.appendChild(btnEdit);
+    actions.appendChild(btnDel);
+
+    wrap.appendChild(actions);
+    elMobileList.appendChild(wrap);
+  }
+}
 
 function renderTable() {
   const itens = getLancamentosFiltered();
@@ -534,6 +592,7 @@ function renderAll() {
   renderCardsDividas();
   renderTable();
   renderParcelados();
+  renderMobileList();
 }
 
 // ===== Modal edit =====
